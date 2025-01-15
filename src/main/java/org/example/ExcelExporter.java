@@ -39,7 +39,7 @@ public class ExcelExporter {
 
             // 输出 Group 行
             Row groupRow = sheet.createRow(rowNum++);
-            createCell(groupRow, 0, "Group " + groupKey);
+            createCell(groupRow, 0, groupKey);
 
             // 输出 Group Name（如果存在）
             Optional<String> groupName = getGroupName(groupFields);
