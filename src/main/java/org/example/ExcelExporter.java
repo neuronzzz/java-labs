@@ -1,5 +1,6 @@
 package org.example;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -9,106 +10,112 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class ExcelExporter {
+    private final String filePath;
+    private final Workbook workbook;
+    private final Sheet sheet;
 
-    public static void exportToExcel(Object data, String filePath) throws IOException, IllegalAccessException {
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Data");
+    ExcelExporter(String filePath, String sheetName) {
+        this.filePath = filePath;
+        this.workbook = new XSSFWorkbook();
+        this.sheet = this.workbook.createSheet(sheetName);
+    }
 
-        int rowNum = 0;
+    public void exportDataToExcel(Object dataObj) throws IOException, IllegalAccessException {
+        int rowNum = rolloutDataToExcel(dataObj, 0);
 
-        // 获取所有字段并按 group 分组
-        Field[] fields = data.getClass().getDeclaredFields();
-        Map<String, List<Field>> groupMap = new TreeMap<>();
-
-        for (Field field : fields) {
-            if (field.isAnnotationPresent(ExcelColumn.class)) {
-                ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
-                String group = annotation.group();
-                groupMap.putIfAbsent(group, new ArrayList<>());
-                groupMap.get(group).add(field);
-            }
+        try (FileOutputStream fileOut = new FileOutputStream(this.filePath)) {
+            this.workbook.write(fileOut);
         }
 
-        // 遍历每个分组
-        for (Map.Entry<String, List<Field>> entry : groupMap.entrySet()) {
-            String groupKey = entry.getKey();
-            List<Field> groupFields = entry.getValue();
+        System.out.printf("rowNum(生成了多少条数据): " + rowNum);
 
-            // 输出 Group 行
-            Row groupRow = sheet.createRow(rowNum++);
-            createCell(groupRow, 0, groupKey);
+        this.workbook.close();
+    }
 
-            // 输出 Group Name（如果存在）
-            Optional<String> groupName = getGroupName(groupFields);
-            if (groupName.isPresent()) {
-                createCell(groupRow, 1, groupName.get());
-            }
+    private int rolloutDataToExcel(Object dataObj, int rowNum) throws IllegalAccessException {
+        Field[] fields = dataObj.getClass().getDeclaredFields();
 
-            // 遍历组内字段
-            for (Field field : groupFields) {
-                field.setAccessible(true);
+        List<Field> noGroupFields = new ArrayList<>();
+        TreeMap<ExcelRowGroup, List<Field>> groupMap = new TreeMap<>(new ExcelRowGroupComparator());
+
+        for (Field field : fields) {
+            field.setAccessible(true);
+            if (field.isAnnotationPresent(ExcelColumn.class)) {
                 ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
-                String label = annotation.label();
-                Object value = field.get(data);
+                ExcelRowGroup group = annotation.group();
 
-                if (value instanceof List) {
-                    // 处理 List 类型
-                    Row listLabelRow = sheet.createRow(rowNum++);
-                    createCell(listLabelRow, 1, label);
-
-                    List<?> list = (List<?>) value;
-                    for (Object item : list) {
-                        if (item instanceof String) {
-                            Row listItemRow = sheet.createRow(rowNum++);
-                            createCell(listItemRow, 2, item.toString());
-                        } else {
-                            // 处理嵌套对象
-                            processNestedObject(item, sheet, rowNum);
-                        }
-                    }
+                if (group.index().isEmpty()) {
+                    noGroupFields.add(field);
                 } else {
-                    // 处理普通字段
-                    Row dataRow = sheet.createRow(rowNum++);
-                    createCell(dataRow, 1, label);
-                    createCell(dataRow, 2, value != null ? value.toString() : "");
+                    groupMap.putIfAbsent(group, new ArrayList<>());
+                    groupMap.get(group).add(field);
                 }
             }
         }
 
-        // 写入 Excel 文件
-        try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
-            workbook.write(fileOut);
+        for (Field field : noGroupFields) {
+            rowNum = processField(dataObj, field, rowNum);
         }
-        workbook.close();
-    }
 
-    private static Optional<String> getGroupName(List<Field> groupFields) {
-        for (Field field : groupFields) {
-            ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
-            if (!annotation.groupName().isEmpty()) {
-                return Optional.of(annotation.groupName());
+        for (Map.Entry<ExcelRowGroup, List<Field>> entry : groupMap.entrySet()) {
+            ExcelRowGroup group = entry.getKey();
+            List<Field> groupFields = entry.getValue();
+
+            Row groupRow = this.sheet.createRow(rowNum++);
+            createCell(groupRow, 0, group.index());
+
+            if (!group.labelNext().isEmpty()) {
+                Row groupLabelNextRow = sheet.createRow(rowNum++);
+                createCell(groupLabelNextRow, 1, group.label());
+            }
+
+            for (Field field : groupFields) {
+                rowNum = processField(dataObj, field, rowNum);
             }
         }
-        return Optional.empty();
+
+        return rowNum;
     }
 
-    private static void processNestedObject(Object item, Sheet sheet, int rowNum) throws IllegalAccessException {
-        Field[] nestedFields = item.getClass().getDeclaredFields();
-        for (Field nestedField : nestedFields) {
-            if (nestedField.isAnnotationPresent(ExcelColumn.class)) {
-                ExcelColumn annotation = nestedField.getAnnotation(ExcelColumn.class);
-                String nestedLabel = annotation.label();
-                nestedField.setAccessible(true);
-                Object nestedValue = nestedField.get(item);
+    private int processField(Object dataObj, Field field, int rowNum) throws IllegalAccessException {
+        ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
+        String label = annotation.label();
+        Object value = field.get(dataObj);
 
-                Row nestedRow = sheet.createRow(rowNum++);
-                createCell(nestedRow, 1, nestedLabel);
-                createCell(nestedRow, 2, nestedValue != null ? nestedValue.toString() : "");
+        if (value != null) {
+            if (value instanceof List) {
+                if (!StringUtils.isBlank(label)) {
+                    Row listLabelRow = this.sheet.createRow(rowNum++);
+                    createCell(listLabelRow, 1, label);
+                }
+
+                List<?> list = (List<?>) value;
+                for (Object item : list) {
+                    rowNum = rolloutDataToExcel(item, rowNum);
+                }
+            } else if (!isPrimitiveOrWrapper(value.getClass()) && !value.getClass().equals(String.class)) {
+                if (!StringUtils.isBlank(label)) {
+                    Row listLabelRow = this.sheet.createRow(rowNum++);
+                    createCell(listLabelRow, 1, label);
+                }
+
+                rowNum = rolloutDataToExcel(value, rowNum);
+            } else {
+                Row dataRow = sheet.createRow(rowNum++);
+                createCell(dataRow, 1, label);
+                createCell(dataRow, 2, value.toString());
             }
         }
+
+        return rowNum;
     }
 
     private static void createCell(Row row, int cellNum, String value) {
@@ -116,24 +123,24 @@ public class ExcelExporter {
         cell.setCellValue(value);
     }
 
+    private static boolean isPrimitiveOrWrapper(Class<?> type) {
+        return type.isPrimitive() || type.equals(Boolean.class) || type.equals(Integer.class) || type.equals(Character.class) || type.equals(Byte.class) || type.equals(Short.class) || type.equals(Double.class) || type.equals(Long.class) || type.equals(Float.class);
+    }
+
+    private static String timeStamp() {
+        LocalDateTime currentDateTime = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd@HH:mm:ss");
+        return currentDateTime.format(formatter);
+    }
+
     public static void main(String[] args) throws IOException, IllegalAccessException {
         // 创建示例数据
-        ClassB classB1 = new ClassB();
-        classB1.setAttributeB1("Value B1-1");
-        classB1.setAttributeB2("Value B2-1");
-
-        ClassB classB2 = new ClassB();
-        classB2.setAttributeB1("Value B1-2");
-        classB2.setAttributeB2("Value B2-2");
-
         ClassA classA = new ClassA();
-        classA.setAttribute1("Attribute 1 Value");
-        classA.setAttribute2("Attribute 2 Value");
-        classA.setStringList(Arrays.asList("Value 1", "Value 2", "Value 3"));
-        classA.setClassBList(Arrays.asList(classB1, classB2));
+        classA.setAttribute1("ClassA attribute1");
 
         // 导出到 Excel
-        exportToExcel(classA, "output.xlsx");
+        ExcelExporter ee = new ExcelExporter(String.format("output-" + timeStamp() + ".xlsx"), "sheet1");
+        ee.exportDataToExcel(classA);
     }
 }
 

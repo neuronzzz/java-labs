@@ -81,3 +81,6 @@ fabric.properties
 /.idea/misc.xml
 /.idea/vcs.xml
 /.idea/inspectionProfiles/profiles_settings.xml
+
+# Maven
+target/
