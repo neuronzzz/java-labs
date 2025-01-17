@@ -12,10 +12,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 public class ExcelExporter {
     private final String filePath;
@@ -72,9 +69,13 @@ public class ExcelExporter {
             Row groupRow = this.sheet.createRow(rowNum++);
             createCell(groupRow, 0, group.index());
 
+            if (!group.label().isEmpty()) {
+                createCell(groupRow, 1, group.label());
+            }
+
             if (!group.labelNext().isEmpty()) {
-                Row groupLabelNextRow = sheet.createRow(rowNum++);
-                createCell(groupLabelNextRow, 1, group.label());
+                Row groupNextRow = sheet.createRow(rowNum++);
+                createCell(groupNextRow, 1, group.labelNext());
             }
 
             for (Field field : groupFields) {
@@ -134,46 +135,55 @@ public class ExcelExporter {
     }
 
     public static void main(String[] args) throws IOException, IllegalAccessException {
-        ClassA classA = new ClassA();
-        // 为 attribute1 和 attribute2 赋值
-        classA.setAttribute1("Value for attribute1");
-        classA.setAttribute2("Value for attribute2");
+        ClassD classD = ClassD.builder()
+                .attribute1("ClassD attribute1")
+                .attribute2("ClassD attribute1")
+                .build();
 
-        // 初始化 ClassB 对象
-        ClassB classB = new ClassB();
-        classB.setAttribute1("Value for ClassB attribute1");
-        classB.setAttribute2("Value for ClassB attribute2");
+        ClassD classD1 = ClassD.builder()
+                .attribute1("ClassD1 attribute1")
+                .attribute2("ClassD1 attribute1")
+                .build();
 
-        ClassC classC = new ClassC();
-        classB.setAttribute1("Value for ClassC attribute1");
-        classB.setAttribute2("Value for ClassC attribute2");
-        classB.setClassC(classC);
+        ClassD classD2 = ClassD.builder()
+                .attribute1("ClassD2 attribute1")
+                .attribute2("ClassD2 attribute1")
+                .build();
 
-        List<ClassC> classCList = new ArrayList<>();
-        ClassC classC2 = new ClassC();
-        classC2.setAttribute1("Value for ClassC2 attribute1");
-        classC2.setAttribute2("Value for ClassC2 attribute2");
-        classCList.add(classC2);
-        classB.setClassCList(classCList);
+        ClassC classC = ClassC.builder()
+                .attribute1("ClassC attribute1")
+                .attribute2("ClassC attribute2")
+                .classD(classD)
+                .classDList(Arrays.asList(classD1, classD2))
+                .build();
 
-        // 初始化 ClassBList
-        List<ClassB> classBList = new ArrayList<>();
+        ClassB classB = ClassB.builder()
+                .attribute1("ClassB attribute1")
+                .attribute2("ClassB attribute2")
+                .classC(classC)
+                .classCList(Arrays.asList(classC))
+                .build();
 
-        ClassB classB2 = new ClassB();
-        classB2.setAttribute1("Value for ClassB2 attribute1");
-        classB2.setAttribute2("Value for ClassB2 attribute2");
+        ClassB classB1 = ClassB.builder()
+                .attribute1("ClassB1 attribute1")
+                .attribute2("ClassB1 attribute2")
+                .classC(classC)
+                .classCList(Arrays.asList(classC))
+                .build();
 
-        ClassC classC3 = new ClassC();
-        classC3.setAttribute1("Value for ClassC3 attribute1");
-        classC3.setAttribute2("Value for ClassC3 attribute2");
+        ClassB classB2 = ClassB.builder()
+                .attribute1("ClassB2 attribute1")
+                .attribute2("ClassB2 attribute2")
+                .classC(classC)
+                .classCList(Arrays.asList(classC))
+                .build();
 
-        classB2.setClassC(classC3);
-        List<ClassC> classCList2 = new ArrayList<>();
-        ClassC classC4 = new ClassC();
-        classC4.setAttribute1("Value for ClassC4 attribute1");
-        classC4.setAttribute2("Value for ClassC4 attribute2");
-        classCList2.add(classC4);
-        classB2.setClassCList(classCList2);
+        ClassA classA = ClassA.builder()
+                .attribute1("ClassA attribute1")
+                .attribute2("ClassA attribute2")
+                .classB(classB)
+                .classBList(Arrays.asList(classB1, classB2))
+                .build();
 
         // 导出到 Excel
         ExcelExporter ee = new ExcelExporter(String.format("output-" + timeStamp() + ".xlsx"), "sheet1");

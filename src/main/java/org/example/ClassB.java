@@ -1,15 +1,17 @@
 package org.example;
 
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
+@Builder
 public class ClassB {
     @ExcelColumn(label = "ClassB - attribute1")
     private String attribute1;
 
-    @ExcelColumn(label = "ClassB - attribute2", group = @ExcelRowGroup(index = "1", label = "group label", labelNext = "group label next"))
+    @ExcelColumn(label = "ClassB - attribute2")
     private String attribute2;
 
     @ExcelColumn(label = "ClassB - classC with ClassC")
