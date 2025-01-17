@@ -1,10 +1,7 @@
 package org.example;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.FileOutputStream;
@@ -18,15 +15,23 @@ public class ExcelExporter {
     private final String filePath;
     private final Workbook workbook;
     private final Sheet sheet;
+    private final String[] header;
 
-    ExcelExporter(String filePath, String sheetName) {
+    ExcelExporter(String filePath, String sheetName, String[] header) {
         this.filePath = filePath;
         this.workbook = new XSSFWorkbook();
         this.sheet = this.workbook.createSheet(sheetName);
+        this.header = header;
+
+
     }
 
     public void exportDataToExcel(Object dataObj) throws IOException, IllegalAccessException {
-        int rowNum = rolloutDataToExcel(dataObj, 0);
+        int rowNum = 0;
+
+        rowNum = buildExcelHeader(rowNum);
+
+        rowNum = rolloutDataToExcel(dataObj, rowNum);
 
         try (FileOutputStream fileOut = new FileOutputStream(this.filePath)) {
             this.workbook.write(fileOut);
@@ -35,6 +40,22 @@ public class ExcelExporter {
         System.out.printf("rowNum(生成了多少条数据): " + rowNum);
 
         this.workbook.close();
+    }
+
+    private int buildExcelHeader(int rowNum) {
+        CellStyle headerCellStyle = workbook.createCellStyle();
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerCellStyle.setFont(headerFont);
+
+        Row headerRow = sheet.createRow(rowNum++);
+
+        for (int i = 0; i < header.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(header[i]);
+            cell.setCellStyle(headerCellStyle);
+        }
+        return rowNum;
     }
 
     private int rolloutDataToExcel(Object dataObj, int rowNum) throws IllegalAccessException {
@@ -121,7 +142,13 @@ public class ExcelExporter {
 
     private static void createCell(Row row, int cellNum, String value) {
         Cell cell = row.createCell(cellNum);
-        cell.setCellValue(value);
+//        cell.setCellValue(value);
+        try {
+            double numericValue = Double.parseDouble(value.toString());
+            cell.setCellValue(numericValue);
+        } catch (NumberFormatException e) {
+            cell.setCellValue(value.toString());
+        }
     }
 
     private static boolean isPrimitiveOrWrapper(Class<?> type) {
@@ -185,7 +212,7 @@ public class ExcelExporter {
                 .classBList(Arrays.asList(classB1, classB2))
                 .build();
 
-        ExcelExporter ee = new ExcelExporter(String.format("output-" + timeStamp() + ".xlsx"), "sheet1");
+        ExcelExporter ee = new ExcelExporter(String.format("output-" + timeStamp() + ".xlsx"), "sheet1", new String[]{"Contents", "DATA required", "DATA output"});
         ee.exportDataToExcel(classA);
     }
 }
