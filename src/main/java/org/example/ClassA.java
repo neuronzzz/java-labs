@@ -9,16 +9,16 @@ import java.util.List;
 @Builder
 public class ClassA {
 
-    @ExcelColumn(label = "ClassA - attribute1", group = @ExcelRowGroup(index = "1", label = "group label", labelNext = "group label next"))
+    @ExcelField(label = "ClassA - attribute1", group = @ExcelRowCategory(index = "1", label = "group label", labelNext = "group label next"))
     private String attribute1;
 
-    @ExcelColumn(label = "ClassA - attribute2")
+    @ExcelField(label = "ClassA - attribute2")
     private String attribute2;
 
-    @ExcelColumn(label = "ClassA - classB with ClassB", group = @ExcelRowGroup(index = "1.2", label = "group label", labelNext = "group label next"))
+    @ExcelField(label = "ClassA - classB with ClassB", group = @ExcelRowCategory(index = "1.2", label = "group label", labelNext = "group label next"))
     private ClassB classB;
 
-    @ExcelColumn(label = "ClassA - classBList with List<ClassB>", group = @ExcelRowGroup(index = "2.1", label = "group label", labelNext = "group label next"))
+    @ExcelField(label = "ClassA - classBList with List<ClassB>", group = @ExcelRowCategory(index = "2.1", label = "group label", labelNext = "group label next"))
     private List<ClassB> classBList;
 
 }

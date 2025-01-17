@@ -11,19 +11,17 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-public class ExcelExporter {
+public class ExcelReportGenerator {
     private final String filePath;
     private final Workbook workbook;
     private final Sheet sheet;
     private final String[] header;
 
-    ExcelExporter(String filePath, String sheetName, String[] header) {
+    ExcelReportGenerator(String filePath, String sheetName, String[] header) {
         this.filePath = filePath;
         this.workbook = new XSSFWorkbook();
         this.sheet = this.workbook.createSheet(sheetName);
         this.header = header;
-
-
     }
 
     public void exportDataToExcel(Object dataObj) throws IOException, IllegalAccessException {
@@ -62,13 +60,13 @@ public class ExcelExporter {
         Field[] fields = dataObj.getClass().getDeclaredFields();
 
         List<Field> noGroupFields = new ArrayList<>();
-        TreeMap<ExcelRowGroup, List<Field>> groupMap = new TreeMap<>(new ExcelRowGroupComparator());
+        TreeMap<ExcelRowCategory, List<Field>> groupMap = new TreeMap<>(new ExcelRowCategoryComparator());
 
         for (Field field : fields) {
             field.setAccessible(true);
-            if (field.isAnnotationPresent(ExcelColumn.class)) {
-                ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
-                ExcelRowGroup group = annotation.group();
+            if (field.isAnnotationPresent(ExcelField.class)) {
+                ExcelField annotation = field.getAnnotation(ExcelField.class);
+                ExcelRowCategory group = annotation.group();
 
                 if (group.index().isEmpty()) {
                     noGroupFields.add(field);
@@ -83,8 +81,8 @@ public class ExcelExporter {
             rowNum = processField(dataObj, field, rowNum);
         }
 
-        for (Map.Entry<ExcelRowGroup, List<Field>> entry : groupMap.entrySet()) {
-            ExcelRowGroup group = entry.getKey();
+        for (Map.Entry<ExcelRowCategory, List<Field>> entry : groupMap.entrySet()) {
+            ExcelRowCategory group = entry.getKey();
             List<Field> groupFields = entry.getValue();
 
             Row groupRow = this.sheet.createRow(rowNum++);
@@ -108,7 +106,7 @@ public class ExcelExporter {
     }
 
     private int processField(Object dataObj, Field field, int rowNum) throws IllegalAccessException {
-        ExcelColumn annotation = field.getAnnotation(ExcelColumn.class);
+        ExcelField annotation = field.getAnnotation(ExcelField.class);
         String label = annotation.label();
         Object value = field.get(dataObj);
 
@@ -157,7 +155,7 @@ public class ExcelExporter {
 
     private static String timeStamp() {
         LocalDateTime currentDateTime = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd@HH:mm:ss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd@HH-mm-ss");
         return currentDateTime.format(formatter);
     }
 
@@ -212,7 +210,7 @@ public class ExcelExporter {
                 .classBList(Arrays.asList(classB1, classB2))
                 .build();
 
-        ExcelExporter ee = new ExcelExporter(String.format("output-" + timeStamp() + ".xlsx"), "sheet1", new String[]{"Contents", "DATA required", "DATA output"});
+        ExcelReportGenerator ee = new ExcelReportGenerator(String.format("output-" + timeStamp() + ".xlsx"), "sheet1", new String[]{"Contents", "DATA required", "DATA output"});
         ee.exportDataToExcel(classA);
     }
 }

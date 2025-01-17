@@ -6,7 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ExcelRowGroup {
+public @interface ExcelRowCategory {
     String index() default StringUtils.EMPTY;
 
     String label() default StringUtils.EMPTY;
