@@ -144,10 +144,10 @@ public class ExcelExporter {
         Cell cell = row.createCell(cellNum);
 //        cell.setCellValue(value);
         try {
-            double numericValue = Double.parseDouble(value.toString());
+            double numericValue = Double.parseDouble(value);
             cell.setCellValue(numericValue);
         } catch (NumberFormatException e) {
-            cell.setCellValue(value.toString());
+            cell.setCellValue(value);
         }
     }
 
