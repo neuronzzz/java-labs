@@ -134,9 +134,46 @@ public class ExcelExporter {
     }
 
     public static void main(String[] args) throws IOException, IllegalAccessException {
-        // 创建示例数据
         ClassA classA = new ClassA();
-        classA.setAttribute1("ClassA attribute1");
+        // 为 attribute1 和 attribute2 赋值
+        classA.setAttribute1("Value for attribute1");
+        classA.setAttribute2("Value for attribute2");
+
+        // 初始化 ClassB 对象
+        ClassB classB = new ClassB();
+        classB.setAttribute1("Value for ClassB attribute1");
+        classB.setAttribute2("Value for ClassB attribute2");
+
+        ClassC classC = new ClassC();
+        classB.setAttribute1("Value for ClassC attribute1");
+        classB.setAttribute2("Value for ClassC attribute2");
+        classB.setClassC(classC);
+
+        List<ClassC> classCList = new ArrayList<>();
+        ClassC classC2 = new ClassC();
+        classC2.setAttribute1("Value for ClassC2 attribute1");
+        classC2.setAttribute2("Value for ClassC2 attribute2");
+        classCList.add(classC2);
+        classB.setClassCList(classCList);
+
+        // 初始化 ClassBList
+        List<ClassB> classBList = new ArrayList<>();
+
+        ClassB classB2 = new ClassB();
+        classB2.setAttribute1("Value for ClassB2 attribute1");
+        classB2.setAttribute2("Value for ClassB2 attribute2");
+
+        ClassC classC3 = new ClassC();
+        classC3.setAttribute1("Value for ClassC3 attribute1");
+        classC3.setAttribute2("Value for ClassC3 attribute2");
+
+        classB2.setClassC(classC3);
+        List<ClassC> classCList2 = new ArrayList<>();
+        ClassC classC4 = new ClassC();
+        classC4.setAttribute1("Value for ClassC4 attribute1");
+        classC4.setAttribute2("Value for ClassC4 attribute2");
+        classCList2.add(classC4);
+        classB2.setClassCList(classCList2);
 
         // 导出到 Excel
         ExcelExporter ee = new ExcelExporter(String.format("output-" + timeStamp() + ".xlsx"), "sheet1");
